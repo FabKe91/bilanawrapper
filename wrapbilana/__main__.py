@@ -59,11 +59,11 @@ COMMAND = {
     "initialize":cmd.initialize_system,
     "energy":cmd.submit_energycalcs,
     "assemble_energies":cmd.check_and_write,
+    "order":cmd.calc_scd,
     #"nofscd":cmd.write_nofscd,
     #"eofscd":cmd.write_eofscd,
-    #"order":cmd.calc_scd,
-    #"selfinteraction":cmd.write_selfinteraction,
-    #"leafletinteraction":cmd.submit_energycalc_leaflet,
+    "selfinteraction":cmd.write_selfinteraction,
+    "leafletinteraction":cmd.submit_energycalc_leaflet,
 }
 
 if ARGS.mode not in commandline_modules:

@@ -141,14 +141,14 @@ def initialize_system(systemname, temperature, jobname, *args,
     with open(scriptfilename, 'w') as scriptf:
         print(\
             'import os, sys'
-            '\nimport bilana2'
+            '\nimport bilana2 as bl'
             '\nfrom bilana2 import Systeminfo'
-            '\nfrom bilana.core import neighbor'
-            '\nfrom bilana.core import order'
+            '\nfrom bilana2 import neighbor'
+            '\nfrom bilana2 import energy'
             '\nsysinfo = bl.Systeminfo(inputfilepath="{0}")'
             '\nneighbor.write_neighbor_info(sysinfo)'
-            '\nnenergy.create_indexfile(sysinfo)'
-            .format(inputfilename),
+            '\nenergy.create_indexfile(sysinfo)'
+            '\nos.remove(sys.argv[0])'.format(inputfilename),
             file=scriptf)
         if not dry:
             write_submitfile('submit.sh', jobfilename, mem=mem, ncores=cores, prio=prio)
@@ -172,8 +172,9 @@ def calc_scd(systemname, temperature, jobname, *args,
             'import os, sys'
             '\nfrom bilana2 import Systeminfo'
             '\nfrom bilana2 import order'
-            '\nneighbor_map = bl.neighbor.get_neighbor_dict(neighborfilename="{1}")'
+            '\nfrom bilana2 import neighbor'
             '\nsysinfo = Systeminfo(inputfilepath="{0}")'
+            '\nneighbor_map = neighbor.get_neighbor_dict(neighborfilename="{1}")'
             '\norder.calc_tilt(sysinfo)'
             '\norder.create_cc_orderfiles(sysinfo, neighbor_map)'
             '\nos.remove(sys.argv[0])'.format(inputfilename, neighborfile),
@@ -234,7 +235,7 @@ def write_selfinteraction(systemname, temperature, jobname, lipidpart, *args,
     with open(scriptfilename, 'w') as scriptf:
         print(\
             'import os, sys'
-            '\nfrom bilana.analysis.energy import Energy'
+            '\nfrom bilana2.analysis.energy import Energy'
             '\nenergy_instance = Energy("{0}", inputfilepath="{1}", neighborfilename="{2}")'
             '\nenergy_instance.selfinteractions_edr_to_xvg()'
             '\nenergy.selfinteractions_xvg_to_dat(energy_instance)'
