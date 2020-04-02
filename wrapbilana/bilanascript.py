@@ -209,7 +209,7 @@ def check_and_write(systemname, temperature, jobname, lipidpart, *args,
             '\nimport bilana2 as bl'
             '\nfrom bilana2 import Energy'
             '\nneighbor_map = bl.neighbor.get_neighbor_dict(neighborfilename="{3}")'
-            '\nenergy_instance = Energy("{0}", neighbor_map, overwrite={1}, inputfilenpath="{2}")'
+            '\nenergy_instance = Energy("{0}", neighbor_map, overwrite={1}, inputfilepath="{2}")'
             '\nif bl.energy.check_exist_xvgs(energy_instance, check_len=energy_instance.universe.trajectory[-1].time):'
             '\n    bl.energy.write_energyfile(energy_instance)'
             '\n    bl.files.create_eofs(efile="{4}", sfile="{5}")'.format(lipidpart, overwrite,
