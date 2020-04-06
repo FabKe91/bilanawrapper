@@ -147,6 +147,8 @@ def initialize_system(systemname, temperature, jobname, *args,
             '\nfrom bilana2 import energy'
             '\nsysinfo = bl.Systeminfo(inputfilepath="{0}")'
             '\nneighbor.write_neighbor_info(sysinfo)'
+            '\nneighborlist = neighbor.get_neighbor_dict()'
+            '\nneighbor.create_neibcount_file(sysinfo, neighborlist)'
             '\nenergy.create_indexfile(sysinfo)'
             '\nos.remove(sys.argv[0])'.format(inputfilename),
             file=scriptf)
@@ -159,7 +161,6 @@ def initialize_system(systemname, temperature, jobname, *args,
 
 def calc_scd(systemname, temperature, jobname, *args,
     inputfilename="inputfile",
-    neighborfile="neighbor_info",
     dry=False,
     **kwargs,):
     ''' Only calculate scd distribution and write to scd_distribution.dat '''
@@ -172,12 +173,10 @@ def calc_scd(systemname, temperature, jobname, *args,
             'import os, sys'
             '\nfrom bilana2 import Systeminfo'
             '\nfrom bilana2 import order'
-            '\nfrom bilana2 import neighbor'
             '\nsysinfo = Systeminfo(inputfilepath="{0}")'
-            '\nneighbor_map = neighbor.get_neighbor_dict(neighborfilename="{1}")'
             '\norder.calc_tilt(sysinfo)'
-            '\norder.create_cc_orderfiles(sysinfo, neighbor_map)'
-            '\nos.remove(sys.argv[0])'.format(inputfilename, neighborfile),
+            '\norder.create_cc_orderfiles(sysinfo)'
+            '\nos.remove(sys.argv[0])'.format(inputfilename),
             file=scriptf)
         if not dry:
             write_submitfile('submit.sh', jobfilename, mem='12G', ncores=8, prio=False)
