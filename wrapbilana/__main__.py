@@ -9,14 +9,25 @@ import logging
 
 from . import bilanascript as cmd
 
-commandline_modules = ["initialize", "energy", "assemble_energies", "nofscd", "eofscd", "order", "selfinteraction", "leafletinteraction"]
+commandline_modules = [
+    "initialize",
+    "energy",
+    "assemble_energies",
+    "order",
+    "nofscd",
+    "eofscd",
+    "selfinteraction",
+    "submit_leafletinteraction",
+    "write_leafletinteraction",
+    "write_waterinteraction",
+    ]
 
 LOGGER = logging.getLogger("wrapbilana.__main__")
 
 PARSER = argparse.ArgumentParser()
 
 # Positional arguments
-PARSER.add_argument("mode", help="Sets mode on which function should be executed. Can be on of {}".format(commandline_modules))
+PARSER.add_argument("mode", help="Sets mode on which function should be executed. Can be one of {}".format(commandline_modules))
 
 
 # Non optional parameters
@@ -60,10 +71,12 @@ COMMAND = {
     "energy":cmd.submit_energycalcs,
     "assemble_energies":cmd.check_and_write,
     "order":cmd.calc_scd,
-    #"nofscd":cmd.write_nofscd,
-    #"eofscd":cmd.write_eofscd,
+    "nofscd":cmd.write_nofscd,
+    "eofscd":cmd.write_eofscd,
     "selfinteraction":cmd.write_selfinteraction,
-    "leafletinteraction":cmd.submit_energycalc_leaflet,
+    "submit_leafletinteraction":cmd.submit_energycalc_leaflet,
+    "write_leafletinteraction":cmd.write_e_leaflet,
+    "write_waterinteraction":cmd.write_e_water,
 }
 
 if ARGS.mode not in commandline_modules:

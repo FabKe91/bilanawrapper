@@ -10,9 +10,6 @@ from bilana2 import Systeminfo
 
 from .helperfunctions import get_minmaxdiv
 from .slurm import write_submitfile
-#from .common import write_submitfile
-#from .common import get_minmaxdiv
-#from .systeminfo import SysInfo
 
 def submit_energycalcs(systemname, temperature, jobname, lipidpart, *args,
     inputfilename="inputfile",
@@ -56,7 +53,7 @@ def submit_energycalcs(systemname, temperature, jobname, lipidpart, *args,
             out, err = proc.communicate()
             print(out.decode(), err.decode())
 
-def submit_energycalc_leaflet(systemname, temperature, jobname, *args,
+def submit_energycalc_leaflet(systemname, temperature, jobname, lipidpart, *args,
     inputfilename="inputfile",
     neighborfile="neighbor_info",
     startdivisor=80,
@@ -88,12 +85,13 @@ def submit_energycalc_leaflet(systemname, temperature, jobname, *args,
                 '\nfrom bilana2 import Energy'
                 '\nneighbor_map = bl.neighbor.get_neighbor_dict(neighborfilename="{3}")'
                 '\nenergy_instance = Energy("{0}", neighbor_map, overwrite={1}, inputfilepath="{2}")'
-                '\nenergy_instance.run_lip_leaflet_interaction(resids={3})'
-                '\nos.remove(sys.argv[0])'.format(overwrite, inputfilename, neighborfile, list_of_res),
+                '\nenergy_instance.run_lip_leaflet_interaction(resids={4})'
+                '\nos.remove(sys.argv[0])'.format(lipidpart, overwrite, inputfilename, neighborfile, list_of_res),
                 file=jobf)
         if not dry:
             write_submitfile('submit.sh', jobfile_name, ncores=cores)
-            cmd = ['sbatch', '-J', complete_name[2:]+"_"+str(jobpart)+'_'+jobname, 'submit.sh','python3', jobscript_name]
+            cmd = ['sbatch', '-J', complete_name[2:]+"_"+str(jobpart)+'_'+jobname, 'submit.sh',
+                'python3', jobscript_name]
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             out, err = proc.communicate()
             print(out.decode(), err.decode())
@@ -224,6 +222,7 @@ def check_and_write(systemname, temperature, jobname, lipidpart, *args,
 def write_selfinteraction(systemname, temperature, jobname, lipidpart, *args,
     inputfilename="inputfile",
     neighborfilename="neighbor_info",
+    overwrite=False,
     dry=False,
     **kwargs,):
     ''' Write selfinteractions.dat from existing .edr files '''
@@ -234,11 +233,12 @@ def write_selfinteraction(systemname, temperature, jobname, lipidpart, *args,
     with open(scriptfilename, 'w') as scriptf:
         print(\
             'import os, sys'
-            '\nfrom bilana2.analysis.energy import Energy'
-            '\nenergy_instance = Energy("{0}", inputfilepath="{1}", neighborfilename="{2}")'
-            '\nenergy_instance.selfinteractions_edr_to_xvg()'
-            '\nenergy.selfinteractions_xvg_to_dat(energy_instance)'
-            '\nos.remove(sys.argv[0])'.format(lipidpart, inputfilename, neighborfilename),
+            '\nimport bilana2 as bl'
+            '\nfrom bilana2 import Energy'
+            '\nneighbor_map = bl.neighbor.get_neighbor_dict(neighborfilename="{2}")'
+            '\nenergy_instance = Energy("{0}", neighbor_map, overwrite={3}, inputfilepath="{1}")'
+            '\nbl.energy.write_selfinteractionfile(energy_instance)'
+            '\nos.remove(sys.argv[0])'.format(lipidpart, inputfilename, neighborfilename, overwrite),
             file=scriptf)
         if not dry:
             write_submitfile('submit.sh', jobfilename, mem='16G', prio=True)
@@ -247,60 +247,115 @@ def write_selfinteraction(systemname, temperature, jobname, lipidpart, *args,
             out, err = proc.communicate()
             print(out.decode(), err.decode())
 
-#def write_eofscd(systemname, temperature, jobname, lipidpart, *args,
-#    inputfilename="inputfile",
-#    neighborfilename="neighbor_info",
-#    energyfilename="all_energies.dat",
-#    scdfilename="scd_distribution.dat",
-#    dry=False,
-#    **kwargs,):
-#    ''' Write eofscd file from table containing all interaction energies '''
-#    complete_systemname = './{}_{}'.format(systemname, temperature)
-#    os.chdir(complete_systemname)
-#    scriptfilename = 'exec'+complete_systemname[2:]+"_"+jobname+'.py'
-#    jobfilename = complete_systemname[2:]+jobname
-#    with open(scriptfilename, 'w') as scriptf:
-#        print(\
-#            'import os, sys'
-#            '\nfrom bilana.analysis.energy import Energy'
-#            '\nfrom bilana.files.eofs import EofScd'
-#            '\nenergy_instance = Energy("{0}", inputfilename="{1}", neighborfilename="{2}")'
-#            '\nif energy_instance.check_exist_xvgs(check_len=energy_instance.t_end):'
-#            '\n    eofs = EofScd("{0}", inputfilename="{1}", energyfilename="{4}", scdfilename="{3}")'
-#            '\n    eofs.create_eofscdfile()'
-#            '\nelse:'
-#            '\n    raise ValueError("There are .edr files missing.")'
-#            '\nos.remove(sys.argv[0])'.format(lipidpart, inputfilename, neighborfilename,  scdfilename, energyfilename),
-#            file=scriptf)
-#        if not dry:
-#            write_submitfile('submit.sh', jobfilename, mem='16G', prio=True)
-#            cmd = ['sbatch', '-J', jobfilename, 'submit.sh','python3', scriptfilename]
-#            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-#            out, err = proc.communicate()
-#            print(out.decode(), err.decode())
+def write_eofscd(systemname, temperature, jobname, lipidpart, *args,
+    inputfilename="inputfile",
+    neighborfilename="neighbor_info",
+    energyfilename="all_energies.dat",
+    scdfilename="scd_distribution.dat",
+    overwrite=False,
+    dry=False,
+    **kwargs,):
+    ''' Write eofscd file from table containing all interaction energies '''
+    complete_systemname = './{}_{}'.format(systemname, temperature)
+    os.chdir(complete_systemname)
+    scriptfilename = 'exec'+complete_systemname[2:]+"_"+jobname+'.py'
+    jobfilename = complete_systemname[2:]+jobname
+    with open(scriptfilename, 'w') as scriptf:
+        print(
+            '\nimport os, sys'
+            '\nimport bilana2 as bl'
+            '\nfrom bilana2 import Energy'
+            '\nneighbor_map = bl.neighbor.get_neighbor_dict(neighborfilename="{3}")'
+            '\nenergy_instance = Energy("{0}", neighbor_map, overwrite={1}, inputfilepath="{2}")'
+            '\nbl.files.create_eofs(efile="{4}", sfile="{5}")'
+            '\nos.remove(sys.argv[0])'.format(lipidpart, overwrite,
+                inputfilename, neighborfilename, energyfilename, scdfilename),
+            file=scriptf)
+        if not dry:
+            write_submitfile('submit.sh', jobfilename, mem='16G', prio=True)
+            cmd = ['sbatch', '-J', jobfilename, 'submit.sh','python3', scriptfilename]
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            out, err = proc.communicate()
+            print(out.decode(), err.decode())
 
-#def write_nofscd(systemname, temperature, jobname, *args,
-#    inputfilename="inputfile",
-#    neighborfilename="neighbor_info",
-#    scdfilename="scd_distribution.dat",
-#    dry=False,
-#    **kwargs,):
-#    ''' Write nofscd file from files containing the order parameter distribution and the neighbor mapping of the system '''
-#    complete_systemname = './{}_{}'.format(systemname, temperature)
-#    os.chdir(complete_systemname)
-#    scriptfilename = 'exec'+complete_systemname[2:]+jobname+'.py'
-#    jobfilename = complete_systemname[2:]+"_"+jobname
-#    with open(scriptfilename, 'w') as scriptf:
-#        print(\
-#            '\nimport os, sys'
-#            '\nfrom bilana.files.nofs import NofScd'
-#            '\nnofs = NofScd(inputfilename="{}")'
-#            '\nnofs.create_NofScd_input(scdfilename="{}", neighborfilename="{}")'
-#            '\nos.remove(sys.argv[0])'.format(inputfilename, scdfilename, neighborfilename),
-#            file=scriptf)
-#        if not dry:
-#            write_submitfile('submit.sh', jobfilename, mem='8G', prio=True)
-#            cmd = ['sbatch', '-J', jobfilename, 'submit.sh','python3', scriptfilename]
-#            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-#            out, err = proc.communicate()
-#            print(out.decode(), err.decode())
+def write_nofscd(systemname, temperature, jobname, *args,
+    neighbortypefile="neighborcount.dat",
+    scdfilename="scd_distribution.dat",
+    dry=False,
+    **kwargs,):
+    '''
+       Write nofscd file from files containing the order parameter distribution and
+       the neighbor mapping of the system
+    '''
+    complete_systemname = './{}_{}'.format(systemname, temperature)
+    os.chdir(complete_systemname)
+    scriptfilename = 'exec'+complete_systemname[2:]+jobname+'.py'
+    jobfilename = complete_systemname[2:]+"_"+jobname
+    with open(scriptfilename, 'w') as scriptf:
+        print(
+            '\nimport os, sys'
+            '\nimport bilana2 as bl'
+            '\nbl.files.create_nofs(neighbortypefile="{0}", sfile="{1}")'
+            '\nos.remove(sys.argv[0])'.format(neighbortypefile, scdfilename),
+            file=scriptf)
+        if not dry:
+            write_submitfile('submit.sh', jobfilename, mem='8G', prio=True)
+            cmd = ['sbatch', '-J', jobfilename, 'submit.sh','python3', scriptfilename]
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            out, err = proc.communicate()
+            print(out.decode(), err.decode())
+
+
+def write_e_water(systemname, temperature, jobname, lipidpart, *args,
+    inputfilename="inputfile",
+    neighborfilename="neighbor_info",
+    overwrite=False,
+    dry=False,
+    **kwargs,):
+    ''' Write eofscd file from table containing all interaction energies '''
+    complete_systemname = './{}_{}'.format(systemname, temperature)
+    os.chdir(complete_systemname)
+    scriptfilename = 'exec'+complete_systemname[2:]+"_"+jobname+'.py'
+    jobfilename = complete_systemname[2:]+jobname
+    with open(scriptfilename, 'w') as scriptf:
+        print(\
+            '\nimport os, sys'
+            '\nimport bilana2 as bl'
+            '\nfrom bilana2 import Energy'
+            '\nneighbor_map = bl.neighbor.get_neighbor_dict(neighborfilename="{3}")'
+            '\nenergy_instance = Energy("{0}", neighbor_map, overwrite={1}, inputfilepath="{2}")'
+            '\nbl.energy.create_lipid_water_interaction_file(energy_instance)'
+            '\nos.remove(sys.argv[0])'.format(lipidpart, overwrite,
+                inputfilename, neighborfilename),
+            file=scriptf)
+        if not dry:
+            write_submitfile('submit.sh', jobfilename, mem='16G', prio=True)
+            cmd = ['sbatch', '-J', jobfilename, 'submit.sh','python3', scriptfilename]
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            out, err = proc.communicate()
+            print(out.decode(), err.decode())
+
+def write_e_leaflet(systemname, temperature, jobname, *args,
+    inputfilename="inputfile",
+    overwrite=False,
+    dry=False,
+    **kwargs,):
+    ''' Write eofscd file from table containing all interaction energies '''
+    complete_systemname = './{}_{}'.format(systemname, temperature)
+    os.chdir(complete_systemname)
+    scriptfilename = 'exec'+complete_systemname[2:]+"_"+jobname+'.py'
+    jobfilename = complete_systemname[2:]+jobname
+    with open(scriptfilename, 'w') as scriptf:
+        print(\
+            '\nimport os, sys'
+            '\nimport bilana2 as bl'
+            '\nsysinfo = Systeminfo(inputfilepath="{0}")'
+            '\nbl.energy.create_lipid_leaflet_interaction_file(sysinfo)'
+            '\nos.remove(sys.argv[0])'.format(inputfilename),
+            file=scriptf)
+        if not dry:
+            write_submitfile('submit.sh', jobfilename, mem='16G', prio=True)
+            cmd = ['sbatch', '-J', jobfilename, 'submit.sh','python3', scriptfilename]
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            out, err = proc.communicate()
+            print(out.decode(), err.decode())
