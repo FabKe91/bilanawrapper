@@ -9,7 +9,7 @@ import logging
 
 from . import bilanascript as cmd
 
-commandline_modules = ["initialize", "energy", "assemble_energies", "nofscd", "eofscd", "order", "selfinteraction", "leafletinteraction"]
+commandline_modules = ["initialize", "energy", "assemble_energies", "nofscd", "eofscd", "order", "selfinteraction", "leafletinteraction", "energy_res"]
 
 LOGGER = logging.getLogger("wrapbilana.__main__")
 
@@ -41,13 +41,13 @@ PARSER.add_argument('--debug', action="store_true", help="Sets logger to debug m
 PARSER.add_argument('--dryrun', action="store_true", help="If set, jobscripts are not submitted.")
 
 # Arbitrary flags
-PARSER.add_argument('--arbitrary', nargs='*', help="Store kwargs that is not yet listed in other arguments. Input like key:val. Beware: The args might not be used.")
+PARSER.add_argument('--additional', nargs='*', help="Store kwargs that is not yet listed in other arguments. Input like key:val. Beware: The args might not be used.")
 
 ARGS = PARSER.parse_args()
 
 kwargs = {}
-if ARGS.arbitrary is not None:
-    for string in ARGS.arbitrary:
+if ARGS.additional is not None:
+    for string in ARGS.additional:
         key, val = string.split(':')
         kwargs[key] = val
 
@@ -58,6 +58,7 @@ LOGGER.debug("Arguments of argparse: %s", ARGS)
 COMMAND = {
     "initialize":cmd.initialize_system,
     "energy":cmd.submit_energycalcs,
+    "energy_res":cmd.submit_energycalc_on_res,
     "assemble_energies":cmd.check_and_write,
     "order":cmd.calc_scd,
     #"nofscd":cmd.write_nofscd,

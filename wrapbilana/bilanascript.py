@@ -3,7 +3,7 @@
     They are used in __main__.py
     All functions must use the same keyword parameter names and the *args and **kwargs parameters as input
 '''
-import os
+import os, sys
 import subprocess
 
 from bilana2 import Systeminfo
@@ -44,9 +44,11 @@ def submit_energycalcs(systemname, temperature, jobname, lipidpart, *args,
                 '\nimport os, sys'
                 '\nimport bilana2 as bl'
                 '\nfrom bilana2 import Energy'
+                '\nntasks = os.environ["SLURM_NTASKS"]'
+                '\nntomp  = os.environ["SLURM_CPUS_PER_TASK"]'
                 '\nneighbor_map = bl.neighbor.get_neighbor_dict(neighborfilename="{3}")'
                 '\nenergy_instance = Energy("{0}", neighbor_map, overwrite={1}, inputfilepath="{2}")'
-                '\nenergy_instance.run_calculation(resids={4})'
+                '\nenergy_instance.run_calculation(resids={4}, ntasks=ntasks, ntomp=ntomp)'
                 '\nos.remove(sys.argv[0])'.format(lipidpart, overwrite, inputfilename, neighborfile, list_of_res),
                 file=jobf)
         if not dry:
@@ -86,9 +88,11 @@ def submit_energycalc_leaflet(systemname, temperature, jobname, *args,
                 '\nimport os, sys'
                 '\nimport bilana2 as bl'
                 '\nfrom bilana2 import Energy'
+                '\nntasks = os.environ["SLURM_NTASKS"]'
+                '\nntomp  = os.environ["SLURM_CPUS_PER_TASK"]'
                 '\nneighbor_map = bl.neighbor.get_neighbor_dict(neighborfilename="{3}")'
                 '\nenergy_instance = Energy("{0}", neighbor_map, overwrite={1}, inputfilepath="{2}")'
-                '\nenergy_instance.run_lip_leaflet_interaction(resids={3})'
+                '\nenergy_instance.run_lip_leaflet_interaction(resids={3}, ntasks=ntasks, ntomp=ntomp)'
                 '\nos.remove(sys.argv[0])'.format(overwrite, inputfilename, neighborfile, list_of_res),
                 file=jobf)
         if not dry:
@@ -98,12 +102,18 @@ def submit_energycalc_leaflet(systemname, temperature, jobname, *args,
             out, err = proc.communicate()
             print(out.decode(), err.decode())
 
-def submit_energycalc_on_res(systemname, temperature, jobname, lipidpart, resid, *args,
+def submit_energycalc_on_res(systemname, temperature, jobname, lipidpart, *args,
+    resid=None,
     inputfilename="inputfile",
     neighborfile="neighbor_info",
     cores=2,
     dry=False,
     **kwargs,):
+
+    if resid is None:
+        print("ERROR: Specify one resid with: --additional resid:X")
+        sys.exit()
+
     complete_name  = './{}_{}'.format(systemname, temperature)
     os.chdir(complete_name)
     print("System and temperature:", systemname, temperature)
@@ -114,9 +124,11 @@ def submit_energycalc_on_res(systemname, temperature, jobname, lipidpart, resid,
             '\nimport os, sys'
             '\nimport bilana2 as bl'
             '\nfrom bilana2 import Energy'
-            '\nneighbor_map = bl.neighbor.get_neighbor_dict(neighborfilename="{3}")'
-            '\nenergy_instance = Energy("{0}", neighbor_map, overwrite={1}, inputfilepath="{2}")'
-            '\nenergy_instance.run_calculation(resids=[{3}])'
+            '\nntasks = os.environ["SLURM_NTASKS"]'
+            '\nntomp  = os.environ["SLURM_CPUS_PER_TASK"]'
+            '\nneighbor_map = bl.neighbor.get_neighbor_dict(neighborfilename="{2}")'
+            '\nenergy_instance = Energy("{0}", neighbor_map, overwrite=True, inputfilepath="{1}")'
+            '\nenergy_instance.run_calculation(resids=[{3}], ntasks=ntasks, ntomp=ntomp)'
             '\nos.remove(sys.argv[0])'.format(lipidpart, inputfilename, neighborfile, resid),
             file=jobf)
     if not dry:
@@ -147,6 +159,9 @@ def initialize_system(systemname, temperature, jobname, *args,
             '\nfrom bilana2 import energy'
             '\nsysinfo = bl.Systeminfo(inputfilepath="{0}")'
             '\nneighbor.write_neighbor_info(sysinfo)'
+            '\nneighborlist = neighbor.get_neighbor_dict(neighborfilename="neighbor_info")'
+            '\nneighbor.create_neibcount_file(sysinfo, neighborlist, outputfilename="neighborcount.dat")'
+            '\nneighbor.write_neighbortype_distr(sysinfo, neighborlist, fname="neighbortype_distribution.dat")'
             '\nenergy.create_indexfile(sysinfo)'
             '\nos.remove(sys.argv[0])'.format(inputfilename),
             file=scriptf)
@@ -172,15 +187,13 @@ def calc_scd(systemname, temperature, jobname, *args,
             'import os, sys'
             '\nfrom bilana2 import Systeminfo'
             '\nfrom bilana2 import order'
-            '\nfrom bilana2 import neighbor'
             '\nsysinfo = Systeminfo(inputfilepath="{0}")'
-            '\nneighbor_map = neighbor.get_neighbor_dict(neighborfilename="{1}")'
             '\norder.calc_tilt(sysinfo)'
-            '\norder.create_cc_orderfiles(sysinfo, neighbor_map)'
+            '\norder.create_cc_orderfiles(sysinfo)'
             '\nos.remove(sys.argv[0])'.format(inputfilename, neighborfile),
             file=scriptf)
         if not dry:
-            write_submitfile('submit.sh', jobfilename, mem='12G', ncores=8, prio=False)
+            write_submitfile('submit.sh', jobfilename, mem='32G', ncores=8, prio=False)
             cmd = ['sbatch', '-J', jobfilename, 'submit.sh','python3', scriptfilename]
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             out, err = proc.communicate()

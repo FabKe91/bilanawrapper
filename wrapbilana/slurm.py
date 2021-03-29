@@ -30,7 +30,6 @@ def write_submitfile(submitout, jobname, ncores=2, mem='4G', prio=False, queue=N
             queue='hims,q0heuer,normal'
         with open(submitout, "w") as sfile:
             print('#!/bin/bash'
-                  '\n#SBATCH -A q0heuer'
                   '\n#SBATCH -p {queue}'
                   '\n#SBATCH --output={jobname}.out'
                   '\n#SBATCH --mail-type=fail'
@@ -40,7 +39,9 @@ def write_submitfile(submitout, jobname, ncores=2, mem='4G', prio=False, queue=N
                   '\n#SBATCH --nodes=1'
                   '\n#SBATCH --cpus-per-task={ncores}'
                   '\n#SBATCH --mem={mem}'
-                  '\nexport OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK'\
+                  '\nexport OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK'
+                  '\nmodule purge'
+                  '\nmodule load GCCcore/8.2.0 GCC/8.2.0-2.31.1 Python/3.7.2 OpenMPI/3.1.3 GROMACS/2018.8'
                   '\nsrun $@'.format(**locals()), file=sfile)
     else:
         raise ValueError("Hostname not found")
