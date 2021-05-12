@@ -90,8 +90,8 @@ def submit_energycalc_leaflet(systemname, temperature, jobname, *args,
                 '\nfrom bilana2 import Energy'
                 '\nntasks = os.environ["SLURM_NTASKS"]'
                 '\nntomp  = os.environ["SLURM_CPUS_PER_TASK"]'
-                '\nneighbor_map = bl.neighbor.get_neighbor_dict(neighborfilename="{3}")'
-                '\nenergy_instance = Energy("{0}", neighbor_map, overwrite={1}, inputfilepath="{2}")'
+                '\nneighbor_map = bl.neighbor.get_neighbor_dict(neighborfilename="{2}")'
+                '\nenergy_instance = Energy("complete", neighbor_map, overwrite={0}, inputfilepath="{1}")'
                 '\nenergy_instance.run_lip_leaflet_interaction(resids={3}, ntasks=ntasks, ntomp=ntomp)'
                 '\nos.remove(sys.argv[0])'.format(overwrite, inputfilename, neighborfile, list_of_res),
                 file=jobf)
@@ -161,7 +161,6 @@ def initialize_system(systemname, temperature, jobname, *args,
             '\nneighbor.write_neighbor_info(sysinfo)'
             '\nneighborlist = neighbor.get_neighbor_dict(neighborfilename="neighbor_info")'
             '\nneighbor.create_neibcount_file(sysinfo, neighborlist, outputfilename="neighborcount.dat")'
-            '\nneighbor.write_neighbortype_distr(sysinfo, neighborlist, fname="neighbortype_distribution.dat")'
             '\nenergy.create_indexfile(sysinfo)'
             '\nos.remove(sys.argv[0])'.format(inputfilename),
             file=scriptf)
@@ -238,6 +237,7 @@ def check_and_write(systemname, temperature, jobname, lipidpart, *args,
 def write_selfinteraction(systemname, temperature, jobname, lipidpart, *args,
     inputfilename="inputfile",
     neighborfilename="neighbor_info",
+    overwrite=True,
     dry=False,
     **kwargs,):
     ''' Write selfinteractions.dat from existing .edr files '''
@@ -248,11 +248,13 @@ def write_selfinteraction(systemname, temperature, jobname, lipidpart, *args,
     with open(scriptfilename, 'w') as scriptf:
         print(\
             'import os, sys'
-            '\nfrom bilana2.analysis.energy import Energy'
-            '\nenergy_instance = Energy("{0}", inputfilepath="{1}", neighborfilename="{2}")'
+            '\nimport bilana2 as bl'
+            '\nfrom bilana2 import Energy'
+            '\nneighbor_map = bl.neighbor.get_neighbor_dict(neighborfilename="{3}")'
+            '\nenergy_instance = Energy("{0}", neighbor_map,  overwrite={1}, inputfilepath="{2}") '
             '\nenergy_instance.selfinteractions_edr_to_xvg()'
             '\nenergy.selfinteractions_xvg_to_dat(energy_instance)'
-            '\nos.remove(sys.argv[0])'.format(lipidpart, inputfilename, neighborfilename),
+            '\nos.remove(sys.argv[0])'.format(lipidpart, overwrite, inputfilename, neighborfilename),
             file=scriptf)
         if not dry:
             write_submitfile('submit.sh', jobfilename, mem='16G', prio=True)

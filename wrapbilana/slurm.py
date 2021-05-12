@@ -1,6 +1,6 @@
 import os
 
-def write_submitfile(submitout, jobname, ncores=2, mem='4G', prio=False, queue=None):
+def write_submitfile(submitout, jobname, ncores=4, mem='4G', prio=False, queue=None):
     username = os.environ['LOGNAME']
     hostname = os.uname()[1]
     if hostname == "login" or "kaa" in hostname: # bagheera main node host name
@@ -25,7 +25,7 @@ def write_submitfile(submitout, jobname, ncores=2, mem='4G', prio=False, queue=N
                   '\nexport OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK'\
                   '\nsrun $@'.format(**locals()), file=sfile)
 
-    elif hostname == 'r06m01': # palma main node host name
+    elif hostname == 'r06m03': # palma main node host name
         if queue is None:
             queue='hims,q0heuer,normal'
         with open(submitout, "w") as sfile:
@@ -34,14 +34,15 @@ def write_submitfile(submitout, jobname, ncores=2, mem='4G', prio=False, queue=N
                   '\n#SBATCH --output={jobname}.out'
                   '\n#SBATCH --mail-type=fail'
                   '\n#SBATCH --mail-user={username}@wwu.de'
-                  '\n#SBATCH --time=48:00:00'
+                  '\n#SBATCH --time=6:00:00'
                   '\n#SBATCH --ntasks=1'
                   '\n#SBATCH --nodes=1'
                   '\n#SBATCH --cpus-per-task={ncores}'
                   '\n#SBATCH --mem={mem}'
                   '\nexport OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK'
-                  '\nmodule purge'
-                  '\nmodule load GCCcore/8.2.0 GCC/8.2.0-2.31.1 Python/3.7.2 OpenMPI/3.1.3 GROMACS/2018.8'
+                  '\nmodule --force purge'
+                  '\nmodule load palma/2019a palma/2019a  GCC/8.2.0-2.31.1  OpenMPI/3.1.3 Python/3.7.2'
+                  '\nsource ~/software/gromacs-2018.8/bin/GMXRC'
                   '\nsrun $@'.format(**locals()), file=sfile)
     else:
         raise ValueError("Hostname not found")
